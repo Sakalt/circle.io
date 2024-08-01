@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Circle.io</title>
+    <style>
+        canvas { border: 1px solid black; }
+        #nameInput { position: absolute; top: 10px; left: 10px; }
+        #languageToggle { position: absolute; top: 10px; right: 10px; }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <input type="text" id="nameInput" placeholder="Enter your name">
+    <button id="languageToggle">Toggle Language</button>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const socket = io();
+
+        let players = [];
+        let food = [];
+        let ranking = [];
+        let language = 'en';  // Default language
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw food
+            ctx.fillStyle = 'green';
+            food.forEach(f => {
+                ctx.beginPath();
+                ctx.arc(f.x, f.y, 5, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+
+            // Draw players
+            players.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, 2 * Math.PI);
+                ctx.fillStyle = 'blue';
+                ctx.fill();
+                ctx.fillStyle = 'white';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(p.name, p.x, p.y);
+            });
+
+            // Draw ranking
+            ctx.fillStyle = 'black';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            ranking.forEach((p, index) => {
+                ctx.fillText(`${index + 1}. ${p.name} - Score: ${p.score}`, 10, 20 + index * 20);
+            });
+        }
+
+        socket.on('update', (data) => {
+            players = data.players;
+            food = data.food;
+            ranking = data.ranking;
+            draw();
+        });
+
+        window.addEventListener('keydown', (e) => {
+            let dx = 0, dy = 0;
+            if (e.key === 'ArrowUp') dy = -5;
+            if (e.key === 'ArrowDown') dy = 5;
+            if (e.key === 'ArrowLeft') dx = -5;
+            if (e.key === 'ArrowRight') dx = 5;
+            socket.emit('move', { dx, dy });
+        });
+
+        document.getElementById('nameInput').addEventListener('change', (e) => {
+            socket.emit('setName', e.target.value);
+        });
+
+        document.getElementById('languageToggle').addEventListener('click', () => {
+            language = language === 'en' ? 'jp' : 'en';
+            document.getElementById('languageToggle').innerText = language === 'en' ? '日本語' : 'English';
+            // Implement language switch logic if necessary
+        });
+    </script>
+</body>
+</html>
